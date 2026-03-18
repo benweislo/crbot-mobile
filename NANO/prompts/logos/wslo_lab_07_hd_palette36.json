@@ -1,0 +1,6 @@
+{
+  "prompt": "Striking 3D neon-tube sign logo on pure black background, moody and cinematic. The word wslo in lowercase formed by glass neon tubes filled with glowing gas, soft purple (#8B5CF6) glow at W transitioning through indigo (#6366F1) at S and L to teal (#2DD4BF) glow at O. The letter O is a gear cog shape, same neon tube material, with visible glass tube forming the gear teeth, glowing teal. Below wslo, the word lab in smaller matching neon tube style, centered, in soft violet (#8B5CF6) neon glow. Realistic neon tube brackets and thin black cables visible. Soft colored light spill on dark surface beneath — purple on the left, teal on the right. Not too bright, elegant and moody. Like a premium lab sign in a dark creative studio. Professional brand identity. Cinematic depth of field.",
+  "negative_prompt": "busy background, particles, icons, neural network, circuit, flat 2D, over-blown neon, harsh glare, cluttered, blurry, watermark, white background, cheap, daytime, matte, orange, red, yellow, green",
+  "api_parameters": { "resolution": "2K", "output_format": "png", "aspect_ratio": "16:9" },
+  "settings": { "resolution": "2K", "style": "Neon tube sign with logo 36 palette", "lighting": "neon glow on dark, cinematic", "quality": "professional brand signage" }
+}

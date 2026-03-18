@@ -1,0 +1,6 @@
+{
+  "prompt": "Clean 3D logo centered on pure white background. On the left: wslo in lowercase, slim inflated glossy 3D forms, not too thick, elegant proportions, gradient from purple (#8B5CF6) through indigo (#6366F1) to teal (#2DD4BF). The letter O is a simple gear cog with smooth rounded teeth and clean empty center hole, same slim glossy material, the gear O is exactly the same height as the W and S letters, not bigger. To the right, vertically centered: .lab in a thin light-weight modern sans-serif font, lowercase, in dark indigo (#4338CA), flat 2D. The dot before lab is small and round. Elegant contrast between slim 3D wslo and thin flat .lab. Pure white background (#FFFFFF) with very soft contact shadows. No particles, no decoration.",
+  "negative_prompt": "busy background, particles, flat 2D wslo, neon glow, cluttered, blurry, watermark, dark background, cheap, uppercase, gear inside gear, thick bold wslo, fat letters, oversized gear, gear bigger than letters, 3D lab text, gradient background",
+  "api_parameters": { "resolution": "2K", "output_format": "png", "aspect_ratio": "16:9" },
+  "settings": { "resolution": "2K", "style": "Logo 36 HD on white bg", "lighting": "bright studio", "quality": "professional logo design" }
+}
