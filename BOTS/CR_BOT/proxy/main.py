@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
 from proxy.auth import LicenseManager
+from proxy.rate_limit import RateLimiter
 
 
 def create_app(license_file: Path | None = None) -> FastAPI:
@@ -14,6 +15,7 @@ def create_app(license_file: Path | None = None) -> FastAPI:
 
     app = FastAPI(title="CR_BOT Proxy")
     app.state.license_mgr = license_mgr
+    app.state.rate_limiter = RateLimiter(max_per_minute=10, max_per_day=50)
 
     app.add_middleware(
         CORSMiddleware,
@@ -27,5 +29,8 @@ def create_app(license_file: Path | None = None) -> FastAPI:
 
     from proxy.routes.transcribe_routes import router as transcribe_router
     app.include_router(transcribe_router)
+
+    from proxy.routes.summarize_routes import router as summarize_router
+    app.include_router(summarize_router)
 
     return app

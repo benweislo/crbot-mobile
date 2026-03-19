@@ -89,6 +89,9 @@ async def transcribe(
     if not auth["valid"]:
         raise HTTPException(403, auth.get("reason", "Invalid license"))
 
+    if not request.app.state.rate_limiter.check(license_key):
+        raise HTTPException(429, "Rate limit exceeded")
+
     logger.info(f"Transcribe request from {auth['client_id']}: {audio.filename}")
 
     audio_bytes = await audio.read()
