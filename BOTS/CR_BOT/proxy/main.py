@@ -25,4 +25,7 @@ def create_app(license_file: Path | None = None) -> FastAPI:
     from proxy.routes.auth_routes import router as auth_router
     app.include_router(auth_router)
 
+    from proxy.routes.transcribe_routes import router as transcribe_router
+    app.include_router(transcribe_router)
+
     return app
