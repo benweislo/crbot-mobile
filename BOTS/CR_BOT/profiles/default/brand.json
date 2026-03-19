@@ -1,0 +1,15 @@
+{
+    "company_name": "CR_BOT",
+    "primary_color": "#6e3ea8",
+    "secondary_color": "#E93F7F",
+    "background_color": "#050505",
+    "text_color": "#E5E5E5",
+    "font_family": "system-ui",
+    "footer_text": "Compte rendu généré automatiquement par CR_BOT",
+    "language": "fr",
+    "context": "",
+    "cr_sections": {
+        "summary": true,
+        "detailed": true
+    }
+}

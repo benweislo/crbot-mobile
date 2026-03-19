@@ -1,0 +1,64 @@
+name: Build CR_BOT
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pyinstaller
+      - name: Build
+        run: |
+          cd build
+          pyinstaller cr_bot.spec --distpath ../dist
+      # V2: wrap dist/ output with NSIS installer for a proper .exe setup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CR_BOT-Windows
+          path: dist/CR_BOT/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r app/requirements.txt
+          pip install pyinstaller
+      - name: Build
+        run: |
+          cd build
+          pyinstaller cr_bot.spec --distpath ../dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CR_BOT-macOS
+          path: dist/CR_BOT/
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r proxy/requirements.txt
+          pip install -r app/requirements.txt
+      - name: Run proxy tests
+        run: python -m pytest proxy/tests/ -v
+      - name: Run app tests
+        run: python -m pytest app/tests/ -v
