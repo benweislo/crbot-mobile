@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QMessageBox, QFrame,
 )
 from PySide6.QtCore import Qt, QThread, Signal, QSize
-from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
+from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon, QBitmap, QRegion
 
 from app.config.manager import ConfigManager
 from app.pipeline.scanner import AudioScanner
@@ -127,17 +127,31 @@ class MainWindow(QMainWindow):
 
         # Load button images
         assets = Path(__file__).parent.parent / "assets"
-        self._btn_go_pixmap = self._load_btn(assets / "btn_go.png", 120)
-        self._btn_go_active_pixmap = self._load_btn(assets / "btn_go_active.png", 120)
+        self._btn_go_pixmap = self._load_btn(assets / "btn_go.png", 140)
+        self._btn_go_active_pixmap = self._load_btn(assets / "btn_go_active.png", 140)
 
         self._init_ui()
         self._apply_theme()
         self._refresh_state()
 
     def _load_btn(self, path: Path, size: int) -> QPixmap | None:
-        if path.exists():
-            return QPixmap(str(path)).scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        return None
+        if not path.exists():
+            return None
+        src = QPixmap(str(path)).scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        # Create circular masked pixmap (transparent outside circle)
+        result = QPixmap(src.size())
+        result.fill(Qt.transparent)
+        painter = QPainter(result)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        # Clip to circle
+        from PySide6.QtGui import QPainterPath
+        clip = QPainterPath()
+        clip.addEllipse(0, 0, src.width(), src.height())
+        painter.setClipPath(clip)
+        painter.drawPixmap(0, 0, src)
+        painter.end()
+        return result
 
     def _init_ui(self):
         bg_path = str(Path(__file__).parent.parent / "assets" / "background-neon.png")

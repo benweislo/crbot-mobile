@@ -264,10 +264,11 @@ def build_html(
             margin-bottom: 56px;
         }}
         .logo {{
-            width: 64px;
-            height: 64px;
+            max-height: 80px;
+            width: auto;
             margin-bottom: 24px;
             opacity: 0.85;
+            object-fit: contain;
         }}
         .header h1 {{
             font-weight: 700;
@@ -454,6 +455,48 @@ def build_html(
             .conclusion-item {{ border-left-color: {secondary}; color: #4a5568; }}
         }}
 
+        /* Collapsible sections */
+        .section-header {{
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            gap: 10px;
+        }}
+        .section-header:hover .section-label {{
+            opacity: 0.8;
+        }}
+        .section-toggle {{
+            font-size: 0.7rem;
+            color: {text2};
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }}
+        .section-toggle.collapsed {{
+            transform: rotate(-90deg);
+        }}
+        .section-content {{
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+            max-height: 2000px;
+            opacity: 1;
+        }}
+        .section-content.collapsed {{
+            max-height: 0;
+            opacity: 0;
+        }}
+
+        /* Color-coded names */
+        .name-person {{
+            color: {tertiary};
+            font-weight: 600;
+        }}
+        .name-software {{
+            color: {secondary};
+            font-weight: 500;
+            font-style: italic;
+        }}
+
         @media (max-width: 640px) {{
             .container {{ padding: 32px 18px 48px; }}
             .section {{ padding: 24px 20px; }}
@@ -488,29 +531,83 @@ def build_html(
         </header>
 
         <section class="section">
-            <div class="section-label">Th\u00e8mes abord\u00e9s</div>
-            <ul class="themes-list">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span class="section-toggle">\u25bc</span>
+                <div class="section-label">Th\u00e8mes abord\u00e9s</div>
+            </div>
+            <div class="section-content">
+                <ul class="themes-list">
 {themes_html}
-            </ul>
+                </ul>
+            </div>
         </section>
 
         <section class="section">
-            <div class="section-label">Actions / Prochaines \u00e9tapes</div>
-            <ul class="actions-list">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span class="section-toggle">\u25bc</span>
+                <div class="section-label">Actions / Prochaines \u00e9tapes</div>
+            </div>
+            <div class="section-content">
+                <ul class="actions-list">
 {actions_html}
-            </ul>
+                </ul>
+            </div>
         </section>
 
         <section class="section">
-            <div class="section-label">Conclusion</div>
+            <div class="section-header" onclick="toggleSection(this)">
+                <span class="section-toggle">\u25bc</span>
+                <div class="section-label">Conclusion</div>
+            </div>
+            <div class="section-content">
 {conclusion_html}
+            </div>
         </section>
 
-        {"<section class='section'><div class='section-label'>Tout en d\u00e9tails</div>" + details_html + "</section>" if details_html else ""}
+        {"<section class='section'><div class='section-header' onclick='toggleSection(this)'><span class='section-toggle'>\u25bc</span><div class='section-label'>Tout en d\u00e9tails</div></div><div class='section-content'>" + details_html + "</div></section>" if details_html else ""}
 
         <footer class="footer">
             G\u00e9n\u00e9r\u00e9 par Mon CR \u2014 wslo.lab
         </footer>
     </div>
+
+    <script>
+    function toggleSection(header) {{
+        const content = header.nextElementSibling;
+        const toggle = header.querySelector('.section-toggle');
+        content.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+    }}
+
+    // Color-code names after page load
+    (function() {{
+        const SOFTWARE = ['Maya','Blender','Unreal','Unity','Houdini','Nuke','After Effects',
+            'Photoshop','Premiere','ZBrush','Substance','Figma','Slack','Discord','Trello',
+            'Notion','Vimeo','YouTube','Python','React','JavaScript','TypeScript','Node',
+            'Docker','Git','GitHub','GitLab','AWS','OVH','Gladia','OpenAI','Claude',
+            'ChatGPT','Excel','PowerPoint','Word','Teams','Zoom','Google Meet','Linear',
+            'Jira','VSCode','Cursor','Kie.ai','ComfyUI','Stable Diffusion','Midjourney',
+            'DALL-E','Whisper','MediaPipe','PyTorch','TensorFlow'];
+
+        function colorize(el) {{
+            if (!el || !el.innerHTML) return;
+            let html = el.innerHTML;
+
+            // Software names (case-insensitive)
+            SOFTWARE.forEach(sw => {{
+                const re = new RegExp('\\\\b(' + sw.replace(/[.*+?^${{}}()|[\\]\\\\]/g, '\\\\$&') + ')\\\\b', 'gi');
+                html = html.replace(re, '<span class="name-software">$1</span>');
+            }});
+
+            // Person names: patterns like "Prénom NOM" or "NOM :" at start of line
+            // Uppercase last names (2+ uppercase letters together)
+            html = html.replace(/\\b([A-Z\u00C0-\u00DC]{{2,}})\\b/g, '<span class="name-person">$1</span>');
+
+            el.innerHTML = html;
+        }}
+
+        document.querySelectorAll('.section-content, .conclusion-item').forEach(colorize);
+    }})();
+    </script>
 </body>
 </html>"""
