@@ -1,13 +1,14 @@
 import webbrowser
+import tempfile
+import os
 from pathlib import Path
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QMessageBox, QSizePolicy,
+    QLabel, QPushButton, QMessageBox, QFrame,
 )
 from PySide6.QtCore import Qt, QThread, Signal, QSize
-from PySide6.QtGui import QPixmap, QPainter, QBrush, QPalette, QIcon
-from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
 
 from app.config.manager import ConfigManager
 from app.pipeline.scanner import AudioScanner
@@ -21,7 +22,6 @@ from app.assets import load_logo_b64, load_font_b64
 
 STAGE_INDEX = {"transcription": 0, "summarization": 1, "generation": 2}
 
-# SVG gear icon for settings button
 GEAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8891AB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="12" cy="12" r="3"/>
 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -29,7 +29,7 @@ GEAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" vie
 
 
 class BackgroundWidget(QWidget):
-    """Central widget that paints a background image scaled to fill."""
+    """Central widget with background image fitted (fully visible) + dark overlay."""
 
     def __init__(self, bg_path: str, parent=None):
         super().__init__(parent)
@@ -38,23 +38,39 @@ class BackgroundWidget(QWidget):
             self._bg_pixmap = QPixmap(bg_path)
 
     def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        # Dark base
+        painter.fillRect(self.rect(), QColor("#0B0F1A"))
+
         if self._bg_pixmap:
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform)
-            # Scale to fill, keep aspect ratio, center crop
+            # Fit inside (fully visible), centered
             scaled = self._bg_pixmap.scaled(
-                self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             x = (self.width() - scaled.width()) // 2
             y = (self.height() - scaled.height()) // 2
+            # Draw at reduced opacity so UI is readable
+            painter.setOpacity(0.4)
             painter.drawPixmap(x, y, scaled)
-            # Dark overlay for readability
-            painter.fillRect(self.rect(), QBrush(Qt.black))
-            painter.setOpacity(0.55)
-            if self._bg_pixmap:
-                painter.drawPixmap(x, y, scaled)
-            painter.end()
+            painter.setOpacity(1.0)
+
+        painter.end()
         super().paintEvent(event)
+
+
+class GlassFrame(QFrame):
+    """Frosted glass container for the progress section."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("""
+            GlassFrame {
+                background-color: rgba(11, 15, 26, 0.65);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
+            }
+        """)
 
 
 class PipelineWorker(QThread):
@@ -95,10 +111,14 @@ class PipelineWorker(QThread):
 
 
 class MainWindow(QMainWindow):
+    COMPACT_HEIGHT = 480
+    EXPANDED_HEIGHT = 720
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Mon CR — wslo.lab")
-        self.setMinimumSize(500, 680)
+        self.setMinimumWidth(500)
+        self.resize(500, self.COMPACT_HEIGHT)
 
         self._config_mgr = ConfigManager(Path(__file__).parent.parent.parent)
         self._config = self._config_mgr.load()
@@ -111,13 +131,12 @@ class MainWindow(QMainWindow):
         self._refresh_state()
 
     def _init_ui(self):
-        # Use background widget as central
         bg_path = str(Path(__file__).parent.parent / "assets" / "background-neon.png")
         central = BackgroundWidget(bg_path)
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
         layout.setContentsMargins(32, 24, 32, 24)
-        layout.setSpacing(20)
+        layout.setSpacing(16)
 
         # Header: logo + settings gear
         header = QHBoxLayout()
@@ -129,14 +148,11 @@ class MainWindow(QMainWindow):
         header.addWidget(self._logo_label)
         header.addStretch()
 
-        # Settings button with SVG gear icon
         settings_btn = QPushButton()
         settings_btn.setObjectName("settingsBtn")
         settings_btn.setFixedSize(40, 40)
         settings_btn.setCursor(Qt.PointingHandCursor)
         settings_btn.setToolTip("Paramètres")
-        # Write SVG to temp file for icon
-        import tempfile, os
         svg_path = os.path.join(tempfile.gettempdir(), "moncr_gear.svg")
         with open(svg_path, "w") as f:
             f.write(GEAR_SVG)
@@ -145,12 +161,6 @@ class MainWindow(QMainWindow):
         settings_btn.clicked.connect(self._open_settings)
         header.addWidget(settings_btn)
         layout.addLayout(header)
-
-        # Separator
-        sep = QLabel()
-        sep.setFixedHeight(1)
-        sep.setStyleSheet("background-color: rgba(255,255,255,0.08);")
-        layout.addWidget(sep)
 
         # Status
         self._status_label = QLabel("● Prêt")
@@ -161,24 +171,40 @@ class MainWindow(QMainWindow):
         self._pending_label.setObjectName("pendingLabel")
         layout.addWidget(self._pending_label)
 
-        # Generate button — BIG
-        self._generate_btn = QPushButton("GÉNÉRER CR")
+        # Generate button — image-based
+        self._generate_btn = QPushButton()
         self._generate_btn.setObjectName("generateBtn")
         self._generate_btn.setCursor(Qt.PointingHandCursor)
         self._generate_btn.clicked.connect(self._start_pipeline)
-        layout.addWidget(self._generate_btn)
+        btn_img_path = Path(__file__).parent.parent / "assets" / "btn_generer_cr.png"
+        if btn_img_path.exists():
+            btn_pixmap = QPixmap(str(btn_img_path)).scaledToWidth(380, Qt.SmoothTransformation)
+            self._generate_btn.setIcon(QIcon(btn_pixmap))
+            self._generate_btn.setIconSize(btn_pixmap.size())
+            self._generate_btn.setFixedSize(btn_pixmap.size().width() + 8, btn_pixmap.size().height() + 8)
+        else:
+            self._generate_btn.setText("GÉNÉRER CR")
+        layout.addWidget(self._generate_btn, alignment=Qt.AlignCenter)
 
-        # Progress
+        # Progress inside glass frame
+        self._glass_frame = GlassFrame()
+        glass_layout = QVBoxLayout(self._glass_frame)
+        glass_layout.setContentsMargins(16, 12, 16, 12)
+        glass_layout.setSpacing(8)
+
         progress_label = QLabel("PROGRESSION")
         progress_label.setObjectName("sectionLabel")
-        layout.addWidget(progress_label)
+        glass_layout.addWidget(progress_label)
+
         self._progress = ProgressWidget(theme=self._config.get("theme"))
-        layout.addWidget(self._progress)
+        glass_layout.addWidget(self._progress)
+
+        layout.addWidget(self._glass_frame)
 
         # Spacer
         layout.addStretch()
 
-        # History toggle button — collapsed by default
+        # History toggle — collapsed by default
         self._history_btn = QPushButton("▶  Historique")
         self._history_btn.setObjectName("historyToggle")
         self._history_btn.setCursor(Qt.PointingHandCursor)
@@ -187,7 +213,7 @@ class MainWindow(QMainWindow):
 
         self._history = HistoryPanel()
         self._history.setVisible(False)
-        self._history.setMaximumHeight(250)
+        self._history.setMaximumHeight(220)
         layout.addWidget(self._history)
 
     def _toggle_history(self):
@@ -195,8 +221,10 @@ class MainWindow(QMainWindow):
         self._history.setVisible(self._history_visible)
         if self._history_visible:
             self._history_btn.setText("▼  Historique")
+            self.resize(self.width(), self.EXPANDED_HEIGHT)
         else:
             self._history_btn.setText("▶  Historique")
+            self.resize(self.width(), self.COMPACT_HEIGHT)
 
     def _apply_theme(self):
         theme = self._config.get("theme", {})

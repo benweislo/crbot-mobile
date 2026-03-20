@@ -18,24 +18,16 @@ def build_stylesheet(theme: dict) -> str:
         color: {text};
     }}
     QPushButton#generateBtn {{
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-            stop:0 {primary}, stop:0.5 {secondary}, stop:1 {tertiary});
-        color: white;
+        background: transparent;
         border: none;
-        border-radius: 14px;
-        padding: 20px 40px;
-        font-size: 22px;
-        font-weight: bold;
-        letter-spacing: 3px;
-        min-height: 60px;
+        padding: 0px;
     }}
     QPushButton#generateBtn:hover {{
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-            stop:0 {secondary}, stop:0.5 {tertiary}, stop:1 {primary});
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
     }}
     QPushButton#generateBtn:disabled {{
-        background: {surface_el};
-        color: {text_muted};
+        opacity: 0.4;
     }}
     QPushButton#settingsBtn {{
         background-color: transparent;
