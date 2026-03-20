@@ -17,18 +17,6 @@ def build_stylesheet(theme: dict) -> str:
     QWidget {{
         color: {text};
     }}
-    QPushButton#generateBtn {{
-        background: transparent;
-        border: none;
-        padding: 0px;
-    }}
-    QPushButton#generateBtn:hover {{
-        background: rgba(255,255,255,0.05);
-        border-radius: 12px;
-    }}
-    QPushButton#generateBtn:disabled {{
-        opacity: 0.4;
-    }}
     QPushButton#settingsBtn {{
         background-color: transparent;
         border: 1px solid rgba(255,255,255,0.1);
@@ -38,19 +26,22 @@ def build_stylesheet(theme: dict) -> str:
         background-color: rgba(255,255,255,0.08);
         border-color: {primary};
     }}
-    QPushButton#historyToggle {{
-        background-color: rgba(255,255,255,0.03);
+    QTabWidget::pane {{
         border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 10px;
-        padding: 10px 16px;
-        font-size: 13px;
-        font-weight: bold;
-        text-align: left;
-        color: {text_muted};
+        border-radius: 8px;
+        background-color: rgba(255,255,255,0.02);
     }}
-    QPushButton#historyToggle:hover {{
-        background-color: rgba(255,255,255,0.06);
-        color: {text};
+    QTabBar::tab {{
+        background-color: {surface_el};
+        color: {text_muted};
+        padding: 8px 20px;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        margin-right: 2px;
+    }}
+    QTabBar::tab:selected {{
+        background-color: {primary};
+        color: white;
     }}
     QPushButton {{
         background-color: {surface_el};

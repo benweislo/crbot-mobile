@@ -8,13 +8,12 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QMessageBox, QFrame,
 )
 from PySide6.QtCore import Qt, QThread, Signal, QSize
-from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon, QBitmap, QRegion
+from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon, QPainterPath
 
 from app.config.manager import ConfigManager
 from app.pipeline.scanner import AudioScanner
 from app.pipeline.orchestrator import PipelineOrchestrator, PipelineResult
 from app.ui.progress_widget import ProgressWidget
-from app.ui.history_panel import HistoryPanel
 from app.ui.settings_dialog import SettingsDialog
 from app.ui.theme import build_stylesheet
 from app.assets import load_logo_b64, load_font_b64
@@ -26,6 +25,35 @@ GEAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" vie
 <circle cx="12" cy="12" r="3"/>
 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
 </svg>"""
+
+
+def _make_circle_pixmap(path: Path, size: int) -> QPixmap | None:
+    """Load an image and crop it to a perfect circle with transparency."""
+    if not path.exists():
+        return None
+    src = QPixmap(str(path)).scaled(size, size, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    result = QPixmap(size, size)
+    result.fill(Qt.transparent)
+    painter = QPainter(result)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    clip = QPainterPath()
+    clip.addEllipse(0, 0, size, size)
+    painter.setClipPath(clip)
+    painter.drawPixmap(0, 0, src)
+    painter.end()
+    return result
+
+
+class ClickableLabel(QLabel):
+    """QLabel that emits a click signal."""
+    from PySide6.QtCore import Signal as _Sig
+    clicked = _Sig()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
 
 class BackgroundWidget(QWidget):
@@ -41,9 +69,7 @@ class BackgroundWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.fillRect(self.rect(), QColor("#0B0F1A"))
-
         if self._bg_pixmap:
-            # Scale to fill (large, like a background wallpaper)
             scaled = self._bg_pixmap.scaled(
                 self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
             )
@@ -52,7 +78,6 @@ class BackgroundWidget(QWidget):
             painter.setOpacity(0.45)
             painter.drawPixmap(x, y, scaled)
             painter.setOpacity(1.0)
-
         painter.end()
         super().paintEvent(event)
 
@@ -109,49 +134,27 @@ class PipelineWorker(QThread):
 
 
 class MainWindow(QMainWindow):
-    COMPACT_HEIGHT = 480
-    EXPANDED_HEIGHT = 720
     WINDOW_WIDTH = 500
+    WINDOW_HEIGHT = 440
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Mon CR — wslo.lab")
-        # Fixed size — not resizable
-        self.setFixedSize(self.WINDOW_WIDTH, self.COMPACT_HEIGHT)
+        self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
 
         self._config_mgr = ConfigManager(Path(__file__).parent.parent.parent)
         self._config = self._config_mgr.load()
         self._worker: PipelineWorker | None = None
         self._pending_sessions: list[dict] = []
-        self._history_visible = False
 
-        # Load button images
+        # Load circular button pixmaps
         assets = Path(__file__).parent.parent / "assets"
-        self._btn_go_pixmap = self._load_btn(assets / "btn_go.png", 140)
-        self._btn_go_active_pixmap = self._load_btn(assets / "btn_go_active.png", 140)
+        self._btn_go_pixmap = _make_circle_pixmap(assets / "btn_go.png", 150)
+        self._btn_go_active_pixmap = _make_circle_pixmap(assets / "btn_go_active.png", 150)
 
         self._init_ui()
         self._apply_theme()
         self._refresh_state()
-
-    def _load_btn(self, path: Path, size: int) -> QPixmap | None:
-        if not path.exists():
-            return None
-        src = QPixmap(str(path)).scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        # Create circular masked pixmap (transparent outside circle)
-        result = QPixmap(src.size())
-        result.fill(Qt.transparent)
-        painter = QPainter(result)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        # Clip to circle
-        from PySide6.QtGui import QPainterPath
-        clip = QPainterPath()
-        clip.addEllipse(0, 0, src.width(), src.height())
-        painter.setClipPath(clip)
-        painter.drawPixmap(0, 0, src)
-        painter.end()
-        return result
 
     def _init_ui(self):
         bg_path = str(Path(__file__).parent.parent / "assets" / "background-neon.png")
@@ -194,18 +197,15 @@ class MainWindow(QMainWindow):
         self._pending_label.setObjectName("pendingLabel")
         layout.addWidget(self._pending_label)
 
-        # GO button — round image
-        self._generate_btn = QPushButton()
-        self._generate_btn.setObjectName("generateBtn")
-        self._generate_btn.setCursor(Qt.PointingHandCursor)
-        self._generate_btn.clicked.connect(self._start_pipeline)
+        # GO button — pure circular image via QLabel (no button chrome)
+        self._go_label = ClickableLabel()
+        self._go_label.setCursor(Qt.PointingHandCursor)
+        self._go_label.setAlignment(Qt.AlignCenter)
+        self._go_label.setFixedSize(150, 150)
         if self._btn_go_pixmap:
-            self._generate_btn.setIcon(QIcon(self._btn_go_pixmap))
-            self._generate_btn.setIconSize(self._btn_go_pixmap.size())
-            self._generate_btn.setFixedSize(self._btn_go_pixmap.size() + QSize(8, 8))
-        else:
-            self._generate_btn.setText("GO")
-        layout.addWidget(self._generate_btn, alignment=Qt.AlignCenter)
+            self._go_label.setPixmap(self._btn_go_pixmap)
+        self._go_label.clicked.connect(self._start_pipeline)
+        layout.addWidget(self._go_label, alignment=Qt.AlignCenter)
 
         # Progress inside glass frame
         self._glass_frame = GlassFrame()
@@ -221,38 +221,12 @@ class MainWindow(QMainWindow):
         glass_layout.addWidget(self._progress)
 
         layout.addWidget(self._glass_frame)
-
-        # Spacer
         layout.addStretch()
 
-        # History toggle — collapsed by default
-        self._history_btn = QPushButton("▶  Historique")
-        self._history_btn.setObjectName("historyToggle")
-        self._history_btn.setCursor(Qt.PointingHandCursor)
-        self._history_btn.clicked.connect(self._toggle_history)
-        layout.addWidget(self._history_btn)
-
-        self._history = HistoryPanel()
-        self._history.setVisible(False)
-        self._history.setMaximumHeight(220)
-        layout.addWidget(self._history)
-
     def _set_go_button_state(self, active: bool):
-        """Switch GO button between normal (violet) and active (green)."""
         pixmap = self._btn_go_active_pixmap if active else self._btn_go_pixmap
         if pixmap:
-            self._generate_btn.setIcon(QIcon(pixmap))
-            self._generate_btn.setIconSize(pixmap.size())
-
-    def _toggle_history(self):
-        self._history_visible = not self._history_visible
-        self._history.setVisible(self._history_visible)
-        if self._history_visible:
-            self._history_btn.setText("▼  Historique")
-            self.setFixedSize(self.WINDOW_WIDTH, self.EXPANDED_HEIGHT)
-        else:
-            self._history_btn.setText("▶  Historique")
-            self.setFixedSize(self.WINDOW_WIDTH, self.COMPACT_HEIGHT)
+            self._go_label.setPixmap(pixmap)
 
     def _apply_theme(self):
         theme = self._config.get("theme", {})
@@ -277,9 +251,6 @@ class MainWindow(QMainWindow):
             self._status_label.setText("● Prêt")
             self._status_label.setStyleSheet("color: #2DD4BF;")
 
-        html_folder = Path(self._config["output_folder"])
-        self._history.load(html_folder, history)
-
     def _start_pipeline(self):
         if not self._pending_sessions:
             self._status_label.setText("● Tout est à jour")
@@ -290,8 +261,8 @@ class MainWindow(QMainWindow):
             self._open_settings()
             return
 
-        self._generate_btn.setEnabled(False)
-        self._set_go_button_state(True)  # Green GO
+        self._go_label.setEnabled(False)
+        self._set_go_button_state(True)
         self._status_label.setText("● En cours...")
         self._status_label.setStyleSheet("color: #10B981;")
 
@@ -317,13 +288,13 @@ class MainWindow(QMainWindow):
     def _on_error(self, stage: str, message: str):
         self._status_label.setText(f"● Erreur ({stage})")
         self._status_label.setStyleSheet("color: #F87171;")
-        self._set_go_button_state(False)  # Back to violet
-        self._generate_btn.setEnabled(True)
+        self._set_go_button_state(False)
+        self._go_label.setEnabled(True)
         QMessageBox.critical(self, f"Erreur — {stage}", message)
 
     def _on_finished(self):
-        self._generate_btn.setEnabled(True)
-        self._set_go_button_state(False)  # Back to violet
+        self._go_label.setEnabled(True)
+        self._set_go_button_state(False)
         self._progress.reset()
         self._worker = None
         self._refresh_state()

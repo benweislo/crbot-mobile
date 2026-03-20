@@ -3,9 +3,13 @@ from pathlib import Path
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit,
     QPushButton, QFileDialog, QComboBox, QGroupBox, QFormLayout, QColorDialog,
+    QTabWidget, QWidget,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
+
+from app.ui.history_panel import HistoryPanel
+from app.config.manager import ConfigManager
 
 
 class SettingsDialog(QDialog):
@@ -14,15 +18,38 @@ class SettingsDialog(QDialog):
         self._config = config.copy()
         self._config["theme"] = config.get("theme", {}).copy()
         self.setWindowTitle("Paramètres")
-        self.setMinimumWidth(520)
-        self.setMinimumHeight(600)
+        self.setMinimumWidth(540)
+        self.setMinimumHeight(640)
         self._init_ui()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(16)
+        layout.setSpacing(12)
 
-        # Folders group
+        # Tabs: Paramètres | Historique
+        tabs = QTabWidget()
+        layout.addWidget(tabs, stretch=1)
+
+        # --- Tab 1: Settings ---
+        settings_tab = QWidget()
+        settings_layout = QVBoxLayout(settings_tab)
+        settings_layout.setSpacing(12)
+        tabs.addTab(settings_tab, "Paramètres")
+
+        # --- Tab 2: Historique ---
+        history_tab = QWidget()
+        history_layout = QVBoxLayout(history_tab)
+        self._history = HistoryPanel()
+        history_layout.addWidget(self._history)
+        tabs.addTab(history_tab, "Historique")
+
+        # Load history data
+        config_mgr = ConfigManager(Path(self._config.get("audio_folder", ".")))
+        history_data = config_mgr.load_history()
+        html_folder = Path(self._config.get("output_folder", "."))
+        self._history.load(html_folder, history_data)
+
+        # Folders group (on settings tab)
         folders_group = QGroupBox("Dossiers")
         folders_layout = QFormLayout()
 
@@ -45,7 +72,7 @@ class SettingsDialog(QDialog):
         folders_layout.addRow("Dossier output:", output_row)
 
         folders_group.setLayout(folders_layout)
-        layout.addWidget(folders_group)
+        settings_layout.addWidget(folders_group)
 
         # Summary group
         summary_group = QGroupBox("Résumé")
@@ -66,7 +93,7 @@ class SettingsDialog(QDialog):
         summary_layout.addLayout(lang_row)
 
         summary_group.setLayout(summary_layout)
-        layout.addWidget(summary_group)
+        settings_layout.addWidget(summary_group)
 
         # Theme group
         theme_group = QGroupBox("Apparence")
@@ -92,7 +119,7 @@ class SettingsDialog(QDialog):
         theme_layout.addRow("Logo:", logo_row)
 
         theme_group.setLayout(theme_layout)
-        layout.addWidget(theme_group)
+        settings_layout.addWidget(theme_group)
 
         # API group
         api_group = QGroupBox("API")
@@ -101,7 +128,7 @@ class SettingsDialog(QDialog):
         self._gladia_edit.setEchoMode(QLineEdit.Password)
         api_layout.addRow("Clé Gladia:", self._gladia_edit)
         api_group.setLayout(api_layout)
-        layout.addWidget(api_group)
+        settings_layout.addWidget(api_group)
 
         # Buttons
         btn_layout = QHBoxLayout()
