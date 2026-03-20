@@ -22,11 +22,12 @@ def build_stylesheet(theme: dict) -> str:
             stop:0 {primary}, stop:0.5 {secondary}, stop:1 {tertiary});
         color: white;
         border: none;
-        border-radius: 12px;
-        padding: 16px 32px;
-        font-size: 16px;
+        border-radius: 14px;
+        padding: 20px 40px;
+        font-size: 22px;
         font-weight: bold;
-        min-height: 48px;
+        letter-spacing: 3px;
+        min-height: 60px;
     }}
     QPushButton#generateBtn:hover {{
         background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -35,6 +36,29 @@ def build_stylesheet(theme: dict) -> str:
     QPushButton#generateBtn:disabled {{
         background: {surface_el};
         color: {text_muted};
+    }}
+    QPushButton#settingsBtn {{
+        background-color: transparent;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+    }}
+    QPushButton#settingsBtn:hover {{
+        background-color: rgba(255,255,255,0.08);
+        border-color: {primary};
+    }}
+    QPushButton#historyToggle {{
+        background-color: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: bold;
+        text-align: left;
+        color: {text_muted};
+    }}
+    QPushButton#historyToggle:hover {{
+        background-color: rgba(255,255,255,0.06);
+        color: {text};
     }}
     QPushButton {{
         background-color: {surface_el};
