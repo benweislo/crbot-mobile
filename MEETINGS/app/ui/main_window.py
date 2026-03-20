@@ -29,7 +29,7 @@ GEAR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" vie
 
 
 class BackgroundWidget(QWidget):
-    """Central widget with background image fitted (fully visible) + dark overlay."""
+    """Central widget with background image large (fills) + dark overlay."""
 
     def __init__(self, bg_path: str, parent=None):
         super().__init__(parent)
@@ -40,18 +40,16 @@ class BackgroundWidget(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        # Dark base
         painter.fillRect(self.rect(), QColor("#0B0F1A"))
 
         if self._bg_pixmap:
-            # Fit inside (fully visible), centered
+            # Scale to fill (large, like a background wallpaper)
             scaled = self._bg_pixmap.scaled(
-                self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+                self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
             )
             x = (self.width() - scaled.width()) // 2
             y = (self.height() - scaled.height()) // 2
-            # Draw at reduced opacity so UI is readable
-            painter.setOpacity(0.4)
+            painter.setOpacity(0.45)
             painter.drawPixmap(x, y, scaled)
             painter.setOpacity(1.0)
 
@@ -60,7 +58,7 @@ class BackgroundWidget(QWidget):
 
 
 class GlassFrame(QFrame):
-    """Frosted glass container for the progress section."""
+    """Frosted glass container."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -113,12 +111,13 @@ class PipelineWorker(QThread):
 class MainWindow(QMainWindow):
     COMPACT_HEIGHT = 480
     EXPANDED_HEIGHT = 720
+    WINDOW_WIDTH = 500
 
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Mon CR — wslo.lab")
-        self.setMinimumWidth(500)
-        self.resize(500, self.COMPACT_HEIGHT)
+        # Fixed size — not resizable
+        self.setFixedSize(self.WINDOW_WIDTH, self.COMPACT_HEIGHT)
 
         self._config_mgr = ConfigManager(Path(__file__).parent.parent.parent)
         self._config = self._config_mgr.load()
@@ -126,9 +125,19 @@ class MainWindow(QMainWindow):
         self._pending_sessions: list[dict] = []
         self._history_visible = False
 
+        # Load button images
+        assets = Path(__file__).parent.parent / "assets"
+        self._btn_go_pixmap = self._load_btn(assets / "btn_go.png", 120)
+        self._btn_go_active_pixmap = self._load_btn(assets / "btn_go_active.png", 120)
+
         self._init_ui()
         self._apply_theme()
         self._refresh_state()
+
+    def _load_btn(self, path: Path, size: int) -> QPixmap | None:
+        if path.exists():
+            return QPixmap(str(path)).scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        return None
 
     def _init_ui(self):
         bg_path = str(Path(__file__).parent.parent / "assets" / "background-neon.png")
@@ -171,19 +180,17 @@ class MainWindow(QMainWindow):
         self._pending_label.setObjectName("pendingLabel")
         layout.addWidget(self._pending_label)
 
-        # Generate button — image-based
+        # GO button — round image
         self._generate_btn = QPushButton()
         self._generate_btn.setObjectName("generateBtn")
         self._generate_btn.setCursor(Qt.PointingHandCursor)
         self._generate_btn.clicked.connect(self._start_pipeline)
-        btn_img_path = Path(__file__).parent.parent / "assets" / "btn_generer_cr.png"
-        if btn_img_path.exists():
-            btn_pixmap = QPixmap(str(btn_img_path)).scaledToWidth(380, Qt.SmoothTransformation)
-            self._generate_btn.setIcon(QIcon(btn_pixmap))
-            self._generate_btn.setIconSize(btn_pixmap.size())
-            self._generate_btn.setFixedSize(btn_pixmap.size().width() + 8, btn_pixmap.size().height() + 8)
+        if self._btn_go_pixmap:
+            self._generate_btn.setIcon(QIcon(self._btn_go_pixmap))
+            self._generate_btn.setIconSize(self._btn_go_pixmap.size())
+            self._generate_btn.setFixedSize(self._btn_go_pixmap.size() + QSize(8, 8))
         else:
-            self._generate_btn.setText("GÉNÉRER CR")
+            self._generate_btn.setText("GO")
         layout.addWidget(self._generate_btn, alignment=Qt.AlignCenter)
 
         # Progress inside glass frame
@@ -216,15 +223,22 @@ class MainWindow(QMainWindow):
         self._history.setMaximumHeight(220)
         layout.addWidget(self._history)
 
+    def _set_go_button_state(self, active: bool):
+        """Switch GO button between normal (violet) and active (green)."""
+        pixmap = self._btn_go_active_pixmap if active else self._btn_go_pixmap
+        if pixmap:
+            self._generate_btn.setIcon(QIcon(pixmap))
+            self._generate_btn.setIconSize(pixmap.size())
+
     def _toggle_history(self):
         self._history_visible = not self._history_visible
         self._history.setVisible(self._history_visible)
         if self._history_visible:
             self._history_btn.setText("▼  Historique")
-            self.resize(self.width(), self.EXPANDED_HEIGHT)
+            self.setFixedSize(self.WINDOW_WIDTH, self.EXPANDED_HEIGHT)
         else:
             self._history_btn.setText("▶  Historique")
-            self.resize(self.width(), self.COMPACT_HEIGHT)
+            self.setFixedSize(self.WINDOW_WIDTH, self.COMPACT_HEIGHT)
 
     def _apply_theme(self):
         theme = self._config.get("theme", {})
@@ -263,8 +277,9 @@ class MainWindow(QMainWindow):
             return
 
         self._generate_btn.setEnabled(False)
+        self._set_go_button_state(True)  # Green GO
         self._status_label.setText("● En cours...")
-        self._status_label.setStyleSheet("color: #8B5CF6;")
+        self._status_label.setStyleSheet("color: #10B981;")
 
         self._worker = PipelineWorker(self._config, self._pending_sessions)
         self._worker.stage_changed.connect(self._on_stage_changed)
@@ -288,10 +303,13 @@ class MainWindow(QMainWindow):
     def _on_error(self, stage: str, message: str):
         self._status_label.setText(f"● Erreur ({stage})")
         self._status_label.setStyleSheet("color: #F87171;")
+        self._set_go_button_state(False)  # Back to violet
+        self._generate_btn.setEnabled(True)
         QMessageBox.critical(self, f"Erreur — {stage}", message)
 
     def _on_finished(self):
         self._generate_btn.setEnabled(True)
+        self._set_go_button_state(False)  # Back to violet
         self._progress.reset()
         self._worker = None
         self._refresh_state()
