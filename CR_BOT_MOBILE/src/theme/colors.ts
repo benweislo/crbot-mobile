@@ -1,0 +1,15 @@
+export const colors = {
+  bg: '#050505',
+  surface: 'rgba(255,255,255,0.05)',
+  surfaceBorder: 'rgba(255,255,255,0.08)',
+  primary: '#6e3ea8',
+  secondary: '#E93F7F',
+  text: '#E5E5E5',
+  textMuted: '#999999',
+  recording: '#FF3B30',
+  paused: '#FF9500',
+  success: '#34C759',
+  error: '#FF453A',
+  gradientStart: '#6e3ea8',
+  gradientEnd: '#E93F7F',
+} as const;

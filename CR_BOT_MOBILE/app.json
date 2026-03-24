@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "CR_BOT",
+    "slug": "crbot-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "crbot",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050505"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wslo.crbot",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"],
+        "NSMicrophoneUsageDescription": "CR_BOT a besoin du micro pour enregistrer vos réunions."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundColor": "#050505"
+      },
+      "package": "com.wslo.crbot",
+      "permissions": [
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        { "root": "src/app" }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "CR_BOT a besoin du micro pour enregistrer vos réunions."
+        }
+      ],
+      "expo-task-manager",
+      "expo-secure-store",
+      "expo-auth-session"
+    ]
+  }
+}
