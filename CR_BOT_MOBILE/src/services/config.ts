@@ -3,7 +3,8 @@ import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
 import type { AppSettings, BrandProfile } from '../types';
 
-export const PROXY_URL = 'https://crbot-proxy.example.com';
+export const PROXY_URL: string =
+  (Constants.expoConfig?.extra?.PROXY_URL as string) || 'https://crbot-proxy.wslo.ai';
 export const LICENSE_KEY: string =
   (Constants.expoConfig?.extra?.LICENSE_KEY as string) ?? '';
 

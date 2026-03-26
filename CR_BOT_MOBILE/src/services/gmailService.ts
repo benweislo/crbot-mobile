@@ -2,11 +2,13 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const GMAIL_TOKEN_KEY = 'gmail_tokens';
-const GOOGLE_CLIENT_ID = '__GOOGLE_CLIENT_ID__'; // Replace after GCP setup
+const GOOGLE_CLIENT_ID: string =
+  (Constants.expoConfig?.extra?.GOOGLE_CLIENT_ID as string) ?? '';
 
 // Discovery document for Google OAuth2
 const discovery = {
