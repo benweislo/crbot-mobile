@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 15.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "CRBOT_LICENSE_KEY": "CRBOT-BETA-0001-WSLO"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "CRBOT_LICENSE_KEY": "CRBOT-BETA-0001-WSLO"
+      }
+    },
+    "production": {
+      "env": {
+        "CRBOT_LICENSE_KEY": "CRBOT-BETA-0001-WSLO"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
