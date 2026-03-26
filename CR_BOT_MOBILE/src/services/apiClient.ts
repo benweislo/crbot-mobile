@@ -75,7 +75,12 @@ export class ApiClient {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         const msg = (body as any).detail ?? `HTTP ${response.status}`;
-        throw new ApiError(msg, response.status);
+        let retryAfter: number | undefined;
+        if (response.status === 429) {
+          const header = response.headers?.get?.('Retry-After');
+          if (header) retryAfter = parseInt(header, 10) || undefined;
+        }
+        throw new ApiError(msg, response.status, retryAfter);
       }
 
       return (await response.json()) as T;

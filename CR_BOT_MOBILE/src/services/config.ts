@@ -1,9 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
+import Constants from 'expo-constants';
 import type { AppSettings, BrandProfile } from '../types';
 
 export const PROXY_URL = 'https://crbot-proxy.example.com';
-export const LICENSE_KEY = 'CRBOT-BETA-0001-WSLO';
+export const LICENSE_KEY: string =
+  (Constants.expoConfig?.extra?.LICENSE_KEY as string) ?? '';
 
 export const RECORDINGS_DIR = `${FileSystem.documentDirectory}recordings/`;
 export const CR_DIR = `${FileSystem.documentDirectory}cr/`;

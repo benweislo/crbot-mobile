@@ -16,9 +16,16 @@ export default function SettingsScreen() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [gmailEmail, setGmailEmail] = useState<string | undefined>();
   const [storageSize, setStorageSize] = useState(0);
+  // Local draft values for text inputs (saved onBlur, not every keystroke)
+  const [draftEmail, setDraftEmail] = useState('');
+  const [draftProxyUrl, setDraftProxyUrl] = useState('');
 
   useEffect(() => {
-    loadSettings().then(setSettings);
+    loadSettings().then((s) => {
+      setSettings(s);
+      setDraftEmail(s.recipient_email);
+      setDraftProxyUrl(s.proxy_url);
+    });
     gmail.loadTokens().then(() => setGmailEmail(gmail.getEmail()));
     new StorageManager(HISTORY_FILE).getTotalSize().then(setStorageSize);
   }, []);
@@ -57,8 +64,9 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Email destinataire</Text>
           <TextInput
             style={styles.input}
-            value={settings.recipient_email}
-            onChangeText={(text) => handleSave({ recipient_email: text })}
+            value={draftEmail}
+            onChangeText={setDraftEmail}
+            onBlur={() => handleSave({ recipient_email: draftEmail })}
             placeholder="collegue@email.com"
             placeholderTextColor={colors.textMuted}
             keyboardType="email-address"
@@ -163,8 +171,9 @@ export default function SettingsScreen() {
           <Text style={styles.label}>Proxy URL (avancé)</Text>
           <TextInput
             style={styles.input}
-            value={settings.proxy_url}
-            onChangeText={(text) => handleSave({ proxy_url: text })}
+            value={draftProxyUrl}
+            onChangeText={setDraftProxyUrl}
+            onBlur={() => handleSave({ proxy_url: draftProxyUrl })}
             placeholder="https://crbot-proxy.example.com"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"

@@ -41,11 +41,19 @@ export default function RecorderScreen() {
 
   useEffect(() => {
     if (status === 'recording') {
-      timerRef.current = setInterval(() => {
+      timerRef.current = setInterval(async () => {
         setSeconds(recorder.getElapsedSeconds());
-      }, 500);
+        const recStatus = await recorder.getStatus();
+        if (recStatus?.metering != null) {
+          // metering is in dBFS (-160..0), normalize to 0..1
+          const db = recStatus.metering;
+          const normalized = Math.max(0, Math.min(1, (db + 60) / 60));
+          setAudioLevel(normalized);
+        }
+      }, 250);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
+      setAudioLevel(0);
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);

@@ -48,6 +48,7 @@ describe('ApiClient', () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 429,
+      headers: { get: (name: string) => (name === 'Retry-After' ? '30' : null) },
       json: async () => ({ detail: 'Rate limit exceeded' }),
     });
 
@@ -57,6 +58,7 @@ describe('ApiClient', () => {
     } catch (e) {
       expect(e).toBeInstanceOf(ApiError);
       expect((e as ApiError).status).toBe(429);
+      expect((e as ApiError).retryAfter).toBe(30);
     }
   });
 

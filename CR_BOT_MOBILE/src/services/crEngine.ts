@@ -130,7 +130,25 @@ function escapeHtml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const CSS_COLOR_RE = /^#[0-9a-fA-F]{3,8}$|^rgba?\(\s*\d{1,3}[\s,]+\d{1,3}[\s,]+\d{1,3}[\s,/]*[\d.]*%?\s*\)$/;
+const FONT_FAMILY_RE = /^[a-zA-Z0-9\s,\-_'"]+$/;
+
+function sanitizeColor(color: string, fallback: string): string {
+  return CSS_COLOR_RE.test(color.trim()) ? color.trim() : fallback;
+}
+
+function sanitizeFontFamily(font: string): string {
+  return FONT_FAMILY_RE.test(font) ? font : 'system-ui, sans-serif';
+}
+
+function sanitizeLogoSrc(src: string): string {
+  if (!src) return '';
+  if (src.startsWith('data:image/')) return src;
+  return '';
 }
 
 /**
@@ -142,25 +160,32 @@ export function generateHTML(crText: string, brand: BrandProfile): string {
   const resumeHtml = buildResume(parsed);
   const detailHtml = buildDetail(parsed);
 
+  const safePrimary = sanitizeColor(brand.primary_color, '#6e3ea8');
+  const safeSecondary = sanitizeColor(brand.secondary_color, '#E93F7F');
+  const safeBg = sanitizeColor(brand.background_color, '#050505');
+  const safeText = sanitizeColor(brand.text_color, '#E5E5E5');
+  const safeFont = sanitizeFontFamily(brand.font_family);
+  const safeLogo = sanitizeLogoSrc(brand.logo_b64);
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Compte Rendu — ${parsed.date}</title>
+<title>Compte Rendu — ${escapeHtml(parsed.date)}</title>
 <style>
   :root {
-    --primary: ${brand.primary_color};
-    --secondary: ${brand.secondary_color};
-    --bg: ${brand.background_color};
-    --text: ${brand.text_color};
+    --primary: ${safePrimary};
+    --secondary: ${safeSecondary};
+    --bg: ${safeBg};
+    --text: ${safeText};
     --surface: rgba(255,255,255,0.05);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: ${brand.font_family};
+    font-family: ${safeFont};
     font-size: 1.05rem;
     line-height: 1.6;
     min-height: 100vh;
@@ -234,7 +259,7 @@ export function generateHTML(crText: string, brand: BrandProfile): string {
 <div class="vignette"></div>
 <div class="container">
   <div class="header">
-    ${brand.logo_b64 ? `<img src="${brand.logo_b64}" class="logo" alt="Logo">` : ''}
+    ${safeLogo ? `<img src="${safeLogo}" class="logo" alt="Logo">` : ''}
     <div class="title">Compte Rendu de Réunion</div>
     <div class="meta">${parsed.date}${parsed.duree ? ` — Durée : ${parsed.duree}` : ''}</div>
   </div>
@@ -248,7 +273,7 @@ export function generateHTML(crText: string, brand: BrandProfile): string {
   <div id="tab-detail" class="tab-content">
     ${detailHtml}
   </div>
-  <div class="footer">${brand.footer_text} — ${brand.company_name}</div>
+  <div class="footer">${escapeHtml(brand.footer_text)} — ${escapeHtml(brand.company_name)}</div>
 </div>
 <script>
 function switchTab(name, btn) {

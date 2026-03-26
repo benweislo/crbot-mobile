@@ -37,6 +37,7 @@ export class RecorderService {
     const bitRate = AUDIO_QUALITY_MAP[quality];
     this.recording = new Audio.Recording();
     await this.recording.prepareToRecordAsync({
+      isMeteringEnabled: true,
       android: {
         extension: '.m4a',
         outputFormat: Audio.AndroidOutputFormat.MPEG_4,
